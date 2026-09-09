@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha RPG - Totalmente Editável (Mesa Compartilhada)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0b0d12',
+                        cardbg: '#141721',
+                        bordercol: '#252a37',
+                        accentred: '#e53e3e',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0b0d12; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f1115; }
+        ::-webkit-scrollbar-thumb { background: #252a37; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3f4656; }
+    </style>
+</head>
+<body class="min-h-screen p-3 md:p-6">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <!-- Aviso de Permissões do Firestore se houver bloqueio -->
+        <div id="firestore-warning" class="hidden bg-amber-950/80 border border-amber-600 text-amber-200 px-4 py-3 rounded-xl text-xs flex justify-between items-center shadow-lg">
+            <div>
+                <strong>Aviso do Firestore:</strong> Permissões insuficientes. Certifique-se de configurar as regras do seu Firestore para permitir leitura e escrita públicas.
+            </div>
+            <button onclick="document.getElementById('firestore-warning').classList.add('hidden')" class="text-amber-400 hover:text-white font-bold px-2">✕</button>
+        </div>
+
+        <!-- Cabeçalho com Seletor, Criação e Sincronização -->
+        <header class="bg-cardbg border border-bordercol rounded-xl p-4 flex flex-col md:flex-row justify-between items-center gap-4 shadow-xl">
+            <div class="flex items-center gap-3 w-full md:w-auto flex-wrap">
+                <span class="text-xs uppercase tracking-wider text-zinc-400 font-bold">Personagens:</span>
+                <div class="flex gap-1.5 flex-wrap" id="character-selector"></div>
+                <button onclick="abrirModalCriarPersonagem()" class="bg-red-700 hover:bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow flex items-center gap-1">
+                    + Nova Ficha Compartilhada
+                </button>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="abrirModalRolagemManual()" class="bg-zinc-800 hover:bg-zinc-700 border border-bordercol text-xs font-semibold px-3 py-2 rounded-lg transition text-zinc-200 flex items-center gap-1.5 shadow">
+                    🎲 Rolagem Manual
+                </button>
+                <div class="text-xs flex items-center gap-2 bg-darkbg px-3 py-1.5 rounded-lg border border-bordercol">
+                    <span id="sync-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="sync-status" class="text-zinc-300">Conectando ao Firebase...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Grade Principal -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Coluna Esquerda: Avatar, Identidade, Atributos e PV/PD -->
+            <div class="lg:col-span-4 space-y-6">
+                <div class="bg-cardbg border border-bordercol rounded-xl p-5 shadow-lg">
+                    <div class="flex flex-col items-center text-center">
+                        <div class="relative group cursor-pointer mb-3" title="Clique para alterar a foto do avatar" onclick="document.getElementById('avatar-input').click()">
+                            <img id="char-avatar" src="https://placehold.co/150x150/141721/e53e3e?text=Agente" class="w-28 h-28 rounded-xl object-cover border-2 border-bordercol shadow-md group-hover:border-red-500 transition">
+                            <div class="absolute inset-0 bg-black/50 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs text-white font-medium transition">Alterar Foto</div>
+                        </div>
+                        <input type="file" id="avatar-input" accept="image/*" class="hidden" onchange="mudarAvatarUpload(event)">
+
+                        <input type="text" id="char-name" class="text-xl font-bold text-center bg-transparent border-b border-transparent hover:border-bordercol focus:border-red-500 focus:outline-none w-full text-white mb-1" placeholder="Nome do Agente" oninput="salvarDados()">
+                        
+                        <div class="flex gap-2 w-full mt-2">
+                            <input type="text" id="char-archetype" class="w-1/2 text-xs text-center bg-darkbg border border-bordercol rounded px-2 py-1 text-zinc-300" placeholder="Arquétipo" oninput="salvarDados()">
+                            <input type="text" id="char-prof" class="w-1/2 text-xs text-center bg-darkbg border border-bordercol rounded px-2 py-1 text-zinc-300" placeholder="Profissão" oninput="salvarDados()">
+                        </div>
+                        <div class="flex items-center justify-between w-full mt-2 gap-2">
+                            <div class="flex items-center gap-1 w-1/2">
+                                <span class="text-xs text-zinc-400">Nível:</span>
+                                <input type="number" id="char-level" class="w-full text-center text-xs bg-darkbg border border-bordercol rounded py-1 text-white font-bold" value="2" oninput="salvarDados()">
+                            </div>
+                            <div class="w-1/2">
+                                <button onclick="deletarPersonagemAtual()" class="w-full bg-zinc-800 hover:bg-red-950 text-zinc-400 hover:text-red-400 border border-bordercol text-[10px] font-semibold py-1.5 rounded transition">Excluir Ficha</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PV e PD -->
+                    <div class="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-bordercol">
+                        <div class="bg-darkbg p-2.5 rounded-lg border border-bordercol text-center">
+                            <label class="text-[10px] uppercase font-bold text-zinc-400 block mb-1">PV (Vida)</label>
+                            <input type="number" id="char-pv" class="w-full text-center text-lg font-bold text-red-500 bg-transparent border-none focus:outline-none" value="10" oninput="salvarDados()">
+                        </div>
+                        <div class="bg-darkbg p-2.5 rounded-lg border border-bordercol text-center">
+                            <label class="text-[10px] uppercase font-bold text-zinc-400 block mb-1">PD (Esforço)</label>
+                            <input type="number" id="char-pd" class="w-full text-center text-lg font-bold text-blue-400 bg-transparent border-none focus:outline-none" value="16" oninput="salvarDados()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Atributos -->
+                <div class="bg-cardbg border border-bordercol rounded-xl p-5 shadow-lg">
+                    <h2 class="text-sm font-bold text-red-500 uppercase tracking-wider mb-3 pb-2 border-b border-bordercol flex justify-between items-center">
+                        Atributos Base
+                        <span class="text-[10px] text-zinc-400 font-normal">Valor = Dado Base</span>
+                    </h2>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between bg-darkbg p-2.5 rounded-lg border border-bordercol">
+                            <span class="text-xs font-bold text-zinc-300">FÍSICO</span>
+                            <div class="flex items-center gap-2">
+                                <select id="attr-fisico" class="bg-zinc-900 border border-bordercol text-xs rounded px-2 py-1 text-white font-bold" onchange="salvarDados(); atualizarLabelsPericias();">
+                                    <option value="4">d4 (4)</option>
+                                    <option value="6" selected>d6 (6)</option>
+                                    <option value="8">d8 (8)</option>
+                                    <option value="10">d10 (10)</option>
+                                    <option value="12">d12 (12)</option>
+                                </select>
+                                <button onclick="rolarAtributoSimples('Físico', document.getElementById('attr-fisico').value)" class="bg-red-900/40 hover:bg-red-900/70 border border-red-700/50 text-[10px] font-bold px-2 py-1 rounded text-red-300">Rolar</button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between bg-darkbg p-2.5 rounded-lg border border-bordercol">
+                            <span class="text-xs font-bold text-zinc-300">MENTE</span>
+                            <div class="flex items-center gap-2">
+                                <select id="attr-mente" class="bg-zinc-900 border border-bordercol text-xs rounded px-2 py-1 text-white font-bold" onchange="salvarDados(); atualizarLabelsPericias();">
+                                    <option value="4">d4 (4)</option>
+                                    <option value="6">d6 (6)</option>
+                                    <option value="8" selected>d8 (8)</option>
+                                    <option value="10">d10 (10)</option>
+                                    <option value="12">d12 (12)</option>
+                                </select>
+                                <button onclick="rolarAtributoSimples('Mente', document.getElementById('attr-mente').value)" class="bg-red-900/40 hover:bg-red-900/70 border border-red-700/50 text-[10px] font-bold px-2 py-1 rounded text-red-300">Rolar</button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between bg-darkbg p-2.5 rounded-lg border border-bordercol">
+                            <span class="text-xs font-bold text-zinc-300">EMOÇÃO</span>
+                            <div class="flex items-center gap-2">
+                                <select id="attr-emoco" class="bg-zinc-900 border border-bordercol text-xs rounded px-2 py-1 text-white font-bold" onchange="salvarDados(); atualizarLabelsPericias();">
+                                    <option value="4">d4 (4)</option>
+                                    <option value="6">d6 (6)</option>
+                                    <option value="8" selected>d8 (8)</option>
+                                    <option value="10">d10 (10)</option>
+                                    <option value="12">d12 (12)</option>
+                                </select>
+                                <button onclick="rolarAtributoSimples('Emoção', document.getElementById('attr-emoco').value)" class="bg-red-900/40 hover:bg-red-900/70 border border-red-700/50 text-[10px] font-bold px-2 py-1 rounded text-red-300">Rolar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Habilidade Especial Opcional -->
+                <div class="bg-cardbg border border-bordercol rounded-xl p-5 shadow-lg">
+                    <h2 class="text-sm font-bold text-amber-500 uppercase tracking-wider mb-2 pb-1 border-b border-bordercol">Habilidade / Foco Especial (Opcional)</h2>
+                    <input type="text" id="foco-titulo" class="w-full text-xs font-bold bg-darkbg border border-bordercol rounded p-1.5 mb-2 text-zinc-200" placeholder="Título da Habilidade" oninput="salvarDados()">
+                    <textarea id="foco-descricao" rows="3" class="w-full text-xs bg-darkbg border border-bordercol rounded p-2 text-zinc-300 resize-none" placeholder="Descrição da habilidade especial..." oninput="salvarDados()"></textarea>
+                </div>
+            </div>
+
+            <!-- Coluna Central: Perícias Completamente Editáveis -->
+            <div class="lg:col-span-5 space-y-6">
+                <div class="bg-cardbg border border-bordercol rounded-xl p-5 shadow-lg">
+                    <div class="flex justify-between items-center mb-3 pb-2 border-b border-bordercol">
+                        <div>
+                            <h2 class="text-sm font-bold text-blue-400 uppercase tracking-wider">Perícias (Totalmente Editáveis)</h2>
+                            <span class="text-[10px] text-zinc-400">Edite nome, dado e atributo a qualquer momento</span>
+                        </div>
+                        <button onclick="adicionarNovaPericia()" class="bg-blue-700 hover:bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded transition">+ Perícia</button>
+                    </div>
+                    <div class="grid grid-cols-1 gap-2.5 max-h-[560px] overflow-y-auto pr-1" id="lista-pericias-container">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna Direita: Inventário e Log -->
+            <div class="lg:col-span-3 space-y-6">
+                <div class="bg-cardbg border border-bordercol rounded-xl p-5 shadow-lg">
+                    <div class="flex justify-between items-center mb-3 pb-2 border-b border-bordercol">
+                        <h2 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">Inventário & Fotos</h2>
+                        <button onclick="abrirModalInventario()" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded transition">+ Item</button>
+                    </div>
+                    <div id="lista-inventario" class="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                    </div>
+                </div>
+
+                <div class="bg-cardbg border border-bordercol rounded-xl p-5 shadow-lg">
+                    <div class="flex justify-between items-center mb-2 pb-1 border-b border-bordercol">
+                        <h2 class="text-sm font-bold text-zinc-300 uppercase tracking-wider">Histórico de Rolagens (Mesa)</h2>
+                        <button onclick="limparLog()" class="text-[10px] text-zinc-500 hover:text-zinc-300">Limpar</button>
+                    </div>
+                    <div id="log-container" class="bg-darkbg border border-bordercol rounded-lg p-3 h-48 overflow-y-auto font-mono text-xs space-y-2 text-zinc-300">
+                        <div class="text-zinc-500 italic">Nenhuma rolagem realizada nesta sessão.</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modais -->
+    <div id="modal-criar" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-cardbg border border-bordercol rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 class="text-base font-bold text-white border-b border-bordercol pb-2">✨ Criar Nova Ficha Compartilhada</h3>
+            <div>
+                <label class="text-xs text-zinc-400 block mb-1">Nome do Agente / Personagem</label>
+                <input type="text" id="novo-nome" class="w-full bg-darkbg border border-bordercol rounded p-2 text-white font-bold" placeholder="Ex: Dra. Helena">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs text-zinc-400 block mb-1">Arquétipo</label>
+                    <input type="text" id="novo-archetype" class="w-full bg-darkbg border border-bordercol rounded p-2 text-white" placeholder="Ex: Executor">
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-400 block mb-1">Profissão</label>
+                    <input type="text" id="novo-prof" class="w-full bg-darkbg border border-bordercol rounded p-2 text-white" placeholder="Ex: Médico">
+                </div>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button onclick="executarCriacaoPersonagem()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg text-sm transition">Criar Ficha</button>
+                <button onclick="fecharModalCriarPersonagem()" class="px-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-2 rounded-lg text-sm transition">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Adicionar Item ao Inventário -->
+    <div id="modal-inventario" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-cardbg border border-bordercol rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 class="text-base font-bold text-white border-b border-bordercol pb-2">🎒 Adicionar Novo Item</h3>
+            <div>
+                <label class="text-xs text-zinc-400 block mb-1">Nome do Item</label>
+                <input type="text" id="item-nome" class="w-full bg-darkbg border border-bordercol rounded p-2 text-white font-bold" placeholder="Ex: Fuzil de Assalto / Lanterna">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs text-zinc-400 block mb-1">Categoria / Tipo</label>
+                    <input type="text" id="item-tipo" class="w-full bg-darkbg border border-bordercol rounded p-2 text-white" placeholder="Ex: Arma, Ferramenta, Item">
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-400 block mb-1">Quantidade</label>
+                    <input type="number" id="item-qtd" value="1" min="1" class="w-full bg-darkbg border border-bordercol rounded p-2 text-white text-center font-bold">
+                </div>
+            </div>
+            <div>
+                <label class="text-xs text-zinc-400 block mb-1">Peso / Espaços</label>
+                <input type="number" id="item-peso" value="1" min="0" class="w-full bg-darkbg border border-bordercol rounded p-2 text-white text-center font-bold">
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button onclick="executarAdicionarItem()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-sm transition">Adicionar Item</button>
+                <button onclick="fecharModalInventario()" class="px-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-2 rounded-lg text-sm transition">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-rolagem" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-cardbg border border-bordercol rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 class="text-base font-bold text-white border-b border-bordercol pb-2">🎲 Rolagem Manual Personalizada</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs text-zinc-400 block mb-1">Quantidade de Dados</label>
+                    <input type="number" id="manual-qtd" value="1" min="1" max="10" class="w-full bg-darkbg border border-bordercol rounded p-2 text-white font-bold text-center">
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-400 block mb-1">Tipo de Dado</label>
+                    <select id="manual-tipo" class="w-full bg-darkbg border border-bordercol rounded p-2 text-white font-bold">
+                        <option value="4">d4</option>
+                        <option value="6" selected>d6</option>
+                        <option value="8">d8</option>
+                        <option value="10">d10</option>
+                        <option value="12">d12</option>
+                        <option value="20">d20</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="text-xs text-zinc-400 block mb-1">Modificador Fixo (+ ou -)</label>
+                <input type="number" id="manual-mod" value="0" class="w-full bg-darkbg border border-bordercol rounded p-2 text-white font-bold text-center">
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button onclick="executarRolagemManual()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg text-sm transition">Rolar Dados</button>
+                <button onclick="fecharModalRolagemManual()" class="px-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-2 rounded-lg text-sm transition">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD9EoanxxFiAJgyXMasYgncEiiRuUMcEjs",
+            authDomain: "fichasintegradas.firebaseapp.com",
+            projectId: "fichasintegradas",
+            storageBucket: "fichasintegradas.firebasestorage.app",
+            messagingSenderId: "284405686100",
+            appId: "1:284405686100:web:e9936a086ac31f38cf32c1",
+            measurementId: "G-EEJZSTFVR2"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+
+        const periciasPadrao = [
+            { nome: 'ACROBACIA', attr: 'fisico', dadoBase: 4 },
+            { nome: 'APTIDÃO', attr: 'mente', dadoBase: 6 },
+            { nome: 'ATLETISMO', attr: 'fisico', dadoBase: 4 },
+            { nome: 'CRIME', attr: 'fisico', dadoBase: 6 },
+            { nome: 'DISCIPLINA', attr: 'emoco', dadoBase: 6 },
+            { nome: 'ENGANAÇÃO', attr: 'emoco', dadoBase: 4 },
+            { nome: 'FURTIVIDADE', attr: 'fisico', dadoBase: 4 },
+            { nome: 'INTIMIDAR', attr: 'emoco', dadoBase: 6 },
+            { nome: 'INTUIÇÃO', attr: 'emoco', dadoBase: 4 },
+            { nome: 'LUTA', attr: 'fisico', dadoBase: 4 },
+            { nome: 'MÁQUINAS', attr: 'mente', dadoBase: 4 },
+            { nome: 'MEDICINA', attr: 'mente', dadoBase: 4 },
+            { nome: 'OCULTISMO', attr: 'mente', dadoBase: 4 },
+            { nome: 'PERCEPÇÃO', attr: 'mente', dadoBase: 6 },
+            { nome: 'PERSUASÃO', attr: 'emoco', dadoBase: 4 },
+            { nome: 'PESQUISAR', attr: 'mente', dadoBase: 6 },
+            { nome: 'PONTARIA', attr: 'fisico', dadoBase: 4 },
+            { nome: 'SOBREVIVÊNCIA', attr: 'mente', dadoBase: 4 },
+            { nome: 'TECNOLOGIA', attr: 'mente', dadoBase: 4 },
+            { nome: 'VIGOR', attr: 'fisico', dadoBase: 6 }
+        ];
+
+        let personagensData = {
+            'alan': {
+                nome: 'ALAN', archetype: 'EXECUTOR', profissao: 'CIENTISTA', nivel: 2, pv: 10, pd: 16,
+                fisico: 6, mente: 8, emoco: 8, focoTitulo: 'FOCO MENTAL', focoDesc: 'Quando faz um teste mental, você pode gastar 2 PD para receber +d4 no teste.',
+                avatar: 'https://placehold.co/150x150/141721/e53e3e?text=Alan',
+                pericias: JSON.parse(JSON.stringify(periciasPadrao)),
+                inventario: [{ nome: 'Lanterna Tática', tipo: 'Equipamento', qtd: 1, peso: 1, imagem: '' }]
+            },
+            'edgar': {
+                nome: 'EDGAR', archetype: 'EXECUTOR', profissao: 'OPERÁRIO', nivel: 2, pv: 18, pd: 10,
+                fisico: 10, mente: 6, emoco: 6, focoTitulo: 'ESFORÇO E SUOR', focoDesc: 'Você possui uma perícia física aumentada para d6.',
+                avatar: 'https://placehold.co/150x150/141721/e53e3e?text=Edgar',
+                pericias: JSON.parse(JSON.stringify(periciasPadrao)),
+                inventario: [{ nome: 'Chave de Fenda Pesada', tipo: 'Ferramenta', qtd: 1, peso: 2, imagem: '' }]
+            }
+        };
+
+        let activeCharId = 'alan';
+        let isRemoteUpdate = false;
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            renderizarSeletorPersonagens();
+            renderizarPericias();
+            renderizarInventario();
+            carregarDadosNaTela(personagensData[activeCharId]);
+
+            try {
+                const docRef = doc(db, 'campanhas', 'sala_principal_fichas', 'dados_gerais', 'fichas_v4');
+                
+                onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const dadosRemotos = docSnap.data();
+                        if (dadosRemotos && Object.keys(dadosRemotos).length > 0) {
+                            isRemoteUpdate = true;
+                            personagensData = dadosRemotos;
+                            if (!personagensData[activeCharId]) {
+                                activeCharId = Object.keys(personagensData)[0];
+                            }
+                            renderizarSeletorPersonagens();
+                            carregarDadosNaTela(personagensData[activeCharId]);
+                            renderizarInventario();
+                            isRemoteUpdate = false;
+                        }
+                    } else {
+                        setDoc(docRef, personagensData).catch(err => {
+                            if (err.code === 'permission-denied') mostrarAvisoPermissao();
+                        });
+                    }
+                    document.getElementById('sync-status').innerText = "Sincronizado (Firebase)";
+                }, (err) => {
+                    if (err.code === 'permission-denied') {
+                        mostrarAvisoPermissao();
+                    } else {
+                        document.getElementById('sync-status').innerText = "Modo Local (Offline)";
+                        document.getElementById('sync-dot').className = "w-2 h-2 rounded-full bg-amber-500";
+                    }
+                });
+            } catch (e) {
+                mostrarAvisoPermissao();
+            }
+        });
+
+        function mostrarAvisoPermissao() {
+            document.getElementById('firestore-warning').classList.remove('hidden');
+            document.getElementById('sync-status').innerText = "Permissão Negada (Offline)";
+            document.getElementById('sync-dot').className = "w-2 h-2 rounded-full bg-red-500 animate-none";
+        }
+
+        function renderizarSeletorPersonagens() {
+            const container = document.getElementById('character-selector');
+            container.innerHTML = '';
+            Object.keys(personagensData).forEach(id => {
+                const char = personagensData[id];
+                const btn = document.createElement('button');
+                const ativo = id === activeCharId;
+                btn.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition ${ativo ? 'bg-red-600 text-white shadow-lg' : 'bg-darkbg text-zinc-400 hover:text-white border border-bordercol'}`;
+                btn.innerText = char.nome || 'Sem Nome';
+                btn.onclick = () => mudarPersonagem(id);
+                container.appendChild(btn);
+            });
+        }
+
+        function mudarPersonagem(id) {
+            activeCharId = id;
+            renderizarSeletorPersonagens();
+            carregarDadosNaTela(personagensData[id]);
+            renderizarInventario();
+        }
+
+        function carregarDadosNaTela(char) {
+            if (!char) return;
+            document.getElementById('char-name').value = char.nome || '';
+            document.getElementById('char-archetype').value = char.archetype || '';
+            document.getElementById('char-prof').value = char.profissao || '';
+            document.getElementById('char-level').value = char.nivel || 1;
+            document.getElementById('char-pv').value = char.pv || 10;
+            document.getElementById('char-pd').value = char.pd || 10;
+            document.getElementById('attr-fisico').value = char.fisico || 6;
+            document.getElementById('attr-mente').value = char.mente || 6;
+            document.getElementById('attr-emoco').value = char.emoco || 6;
+            document.getElementById('foco-titulo').value = char.focoTitulo || '';
+            document.getElementById('foco-descricao').value = char.focoDesc || '';
+            document.getElementById('char-avatar').src = char.avatar || 'https://placehold.co/150x150/141721/e53e3e?text=Agente';
+            
+            if (!char.pericias) {
+                char.pericias = JSON.parse(JSON.stringify(periciasPadrao));
+            }
+            renderizarPericias();
+            renderizarInventario();
+        }
+
+        window.salvarDados = async function() {
+            if (isRemoteUpdate) return;
+            const char = personagensData[activeCharId];
+            if (!char) return;
+            
+            char.nome = document.getElementById('char-name').value;
+            char.archetype = document.getElementById('char-archetype').value;
+            char.profissao = document.getElementById('char-prof').value;
+            char.nivel = parseInt(document.getElementById('char-level').value) || 1;
+            char.pv = parseInt(document.getElementById('char-pv').value) || 0;
+            char.pd = parseInt(document.getElementById('char-pd').value) || 0;
+            char.fisico = parseInt(document.getElementById('attr-fisico').value) || 6;
+            char.mente = parseInt(document.getElementById('attr-mente').value) || 6;
+            char.emoco = parseInt(document.getElementById('attr-emoco').value) || 6;
+            char.focoTitulo = document.getElementById('foco-titulo').value;
+            char.focoDesc = document.getElementById('foco-descricao').value;
+
+            try {
+                const docRef = doc(db, 'campanhas', 'sala_principal_fichas', 'dados_gerais', 'fichas_v4');
+                await setDoc(docRef, personagensData, { merge: true });
+            } catch(e) {
+                if (e.code === 'permission-denied') mostrarAvisoPermissao();
+            }
+        }
+
+        function renderizarPericias() {
+            const container = document.getElementById('lista-pericias-container');
+            container.innerHTML = '';
+            const char = personagensData[activeCharId];
+            if (!char || !char.pericias) return;
+
+            char.pericias.forEach((pericia, index) => {
+                const attrValor = parseInt(document.getElementById(`attr-${pericia.attr}`)?.value) || 6;
+                const div = document.createElement('div');
+                div.className = "bg-darkbg border border-bordercol p-2.5 rounded-lg flex flex-col gap-2 transition";
+
+                div.innerHTML = `
+                    <div class="flex items-center justify-between gap-2">
+                        <input type="text" value="${pericia.nome}" class="bg-transparent border-b border-transparent hover:border-bordercol focus:border-blue-500 focus:outline-none text-xs font-bold text-white w-full uppercase" oninput="atualizarNomePericia(${index}, this.value)">
+                        
+                        <select class="bg-zinc-900 border border-bordercol text-[11px] rounded px-1.5 py-0.5 text-blue-300 font-bold" onchange="atualizarAtributoPericia(${index}, this.value)">
+                            <option value="fisico" ${pericia.attr === 'fisico' ? 'selected' : ''}>Físico</option>
+                            <option value="mente" ${pericia.attr === 'mente' ? 'selected' : ''}>Mente</option>
+                            <option value="emoco" ${pericia.attr === 'emoco' ? 'selected' : ''}>Emoção</option>
+                        </select>
+
+                        <select class="bg-zinc-900 border border-bordercol text-[11px] rounded px-1.5 py-0.5 text-zinc-300 font-bold" onchange="atualizarDadoPericia(${index}, this.value)">
+                            <option value="4" ${pericia.dadoBase == 4 ? 'selected' : ''}>d4</option>
+                            <option value="6" ${pericia.dadoBase == 6 ? 'selected' : ''}>d6</option>
+                            <option value="8" ${pericia.dadoBase == 8 ? 'selected' : ''}>d8</option>
+                            <option value="10" ${pericia.dadoBase == 10 ? 'selected' : ''}>d10</option>
+                            <option value="12" ${pericia.dadoBase == 12 ? 'selected' : ''}>d12</option>
+                        </select>
+
+                        <button onclick="removerPericia(${index})" class="text-zinc-500 hover:text-red-400 p-1" title="Excluir Perícia">✕</button>
+                    </div>
+                    <div class="flex justify-between items-center text-[10px] text-zinc-400 pt-1 border-t border-bordercol/60">
+                        <span>Rolagem: d${pericia.dadoBase} + ${pericia.attr.toUpperCase()} (d${attrValor})</span>
+                        <button onclick="rolarPericiaIndex(${index})" class="bg-blue-900/40 hover:bg-blue-900/70 border border-blue-700/50 text-[10px] font-bold px-2.5 py-1 rounded text-blue-200 transition">Rolar</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.atualizarNomePericia = function(index, val) {
+            personagensData[activeCharId].pericias[index].nome = val.toUpperCase();
+            salvarDados();
+        }
+
+        window.atualizarAtributoPericia = function(index, val) {
+            personagensData[activeCharId].pericias[index].attr = val;
+            salvarDados();
+            renderizarPericias();
+        }
+
+        window.atualizarDadoPericia = function(index, val) {
+            personagensData[activeCharId].pericias[index].dadoBase = parseInt(val);
+            salvarDados();
+            renderizarPericias();
+        }
+
+        window.adicionarNovaPericia = function() {
+            const nome = prompt("Nome da nova perícia:") || "NOVA PERÍCIA";
+            personagensData[activeCharId].pericias.push({ nome: nome.toUpperCase(), attr: 'mente', dadoBase: 4 });
+            renderizarPericias();
+            salvarDados();
+        }
+
+        window.removerPericia = function(index) {
+            personagensData[activeCharId].pericias.splice(index, 1);
+            renderizarPericias();
+            salvarDados();
+        }
+
+        window.atualizarLabelsPericias = function() {
+            renderizarPericias();
+            window.salvarDados();
+        }
+
+        window.rolarAtributoSimples = function(nomeAttr, tipoDado) {
+            const res = Math.floor(Math.random() * parseInt(tipoDado)) + 1;
+            const nomeChar = document.getElementById('char-name').value || 'Agente';
+            adicionarAoLog(`🎲 <strong>${nomeChar}</strong> - Atributo ${nomeAttr} (d${tipoDado}): <strong>${res}</strong>`);
+        }
+
+        function rolarPericiaIndex(index) {
+            const pericia = personagensData[activeCharId].pericias[index];
+            const attrValor = parseInt(document.getElementById(`attr-${pericia.attr}`).value) || 6;
+            
+            const r1 = Math.floor(Math.random() * pericia.dadoBase) + 1;
+            const r2 = Math.floor(Math.random() * attrValor) + 1;
+            const total = r1 + r2;
+            const nomeChar = document.getElementById('char-name').value || 'Agente';
+
+            adicionarAoLog(`🎯 <strong>${nomeChar}</strong> - ${pericia.nome} (d${pericia.dadoBase} + ${pericia.attr.toUpperCase()} d${attrValor}): [${r1}] + [${r2}] = <strong>Total: ${total}</strong>`);
+        }
+
+        window.mudarAvatarUpload = function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('char-avatar').src = e.target.result;
+                    personagensData[activeCharId].avatar = e.target.result;
+                    window.salvarDados();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function renderizarInventario() {
+            const container = document.getElementById('lista-inventario');
+            if (!container) return;
+            container.innerHTML = '';
+            const inv = personagensData[activeCharId]?.inventario || [];
+
+            if (inv.length === 0) {
+                container.innerHTML = '<div class="text-zinc-500 text-center py-4 italic text-xs">Nenhum item no inventário.</div>';
+                return;
+            }
+
+            inv.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = "bg-darkbg border border-bordercol rounded-lg p-2.5 flex justify-between items-center text-xs gap-3";
+                
+                let imgHtml = item.imagem 
+                    ? `<img src="${item.imagem}" class="w-10 h-10 rounded object-cover border border-bordercol cursor-pointer shrink-0" title="Alterar imagem" onclick="this.nextElementSibling.click()">`
+                    : `<div class="w-10 h-10 rounded bg-zinc-800 border border-bordercol flex items-center justify-center text-[9px] text-zinc-400 cursor-pointer shrink-0 hover:border-red-500" title="Adicionar foto" onclick="this.nextElementSibling.click()">+ Foto</div>`;
+
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        ${imgHtml}
+                        <input type="file" accept="image/*" class="hidden" onchange="adicionarImagemItem(${index}, event)">
+                        <div>
+                            <span class="font-bold text-white block">${item.nome}</span>
+                            <span class="text-[10px] text-zinc-400">${item.tipo} • Qtd: ${item.qtd} • Peso: ${item.peso}</span>
+                        </div>
+                    </div>
+                    <button onclick="removerItemInventario(${index})" class="text-zinc-500 hover:text-red-500 p-1" title="Excluir item">✕</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.abrirModalInventario = function() {
+            document.getElementById('item-nome').value = '';
+            document.getElementById('item-tipo').value = 'Item';
+            document.getElementById('item-qtd').value = '1';
+            document.getElementById('item-peso').value = '1';
+            document.getElementById('modal-inventario').classList.remove('hidden');
+            document.getElementById('modal-inventario').classList.add('flex');
+        }
+
+        window.fecharModalInventario = function() {
+            document.getElementById('modal-inventario').classList.remove('flex');
+            document.getElementById('modal-inventario').classList.add('hidden');
+        }
+
+        window.executarAdicionarItem = function() {
+            const nome = document.getElementById('item-nome').value.trim();
+            if (!nome) {
+                alert("Digite o nome do item.");
+                return;
+            }
+            const tipo = document.getElementById('item-tipo').value.trim() || 'Item';
+            const qtd = parseInt(document.getElementById('item-qtd').value) || 1;
+            const peso = parseInt(document.getElementById('item-peso').value) || 1;
+
+            if (!personagensData[activeCharId].inventario) {
+                personagensData[activeCharId].inventario = [];
+            }
+
+            personagensData[activeCharId].inventario.push({ nome, tipo, qtd, peso, imagem: "" });
+            renderizarInventario();
+            window.salvarDados();
+            fecharModalInventario();
+        }
+
+        window.removerItemInventario = function(index) {
+            personagensData[activeCharId].inventario.splice(index, 1);
+            renderizarInventario();
+            window.salvarDados();
+        }
+
+        window.adicionarImagemItem = function(index, event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    personagensData[activeCharId].inventario[index].imagem = e.target.result;
+                    renderizarInventario();
+                    window.salvarDados();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        window.abrirModalCriarPersonagem = function() {
+            document.getElementById('modal-criar').classList.remove('hidden');
+            document.getElementById('modal-criar').classList.add('flex');
+        }
+
+        window.fecharModalCriarPersonagem = function() {
+            document.getElementById('modal-criar').classList.remove('flex');
+            document.getElementById('modal-criar').classList.add('hidden');
+        }
+
+        window.executarCriacaoPersonagem = function() {
+            const nome = document.getElementById('novo-nome').value.trim();
+            if (!nome) return alert("Digite o nome do personagem.");
+            const archetype = document.getElementById('novo-archetype').value.trim() || 'AGENTE';
+            const profissao = document.getElementById('novo-prof').value.trim() || 'CIVIL';
+            const id = 'char_' + Math.random().toString(36).substring(2, 7);
+
+            personagensData[id] = {
+                nome: nome.toUpperCase(),
+                archetype: archetype.toUpperCase(),
+                profissao: profissao.toUpperCase(),
+                nivel: 1,
+                pv: 10,
+                pd: 10,
+                fisico: 6,
+                mente: 6,
+                emoco: 6,
+                focoTitulo: 'NOVO FOCO',
+                focoDesc: 'Descreva sua habilidade especial.',
+                avatar: 'https://placehold.co/150x150/141721/e53e3e?text=' + encodeURIComponent(nome),
+                pericias: JSON.parse(JSON.stringify(periciasPadrao)),
+                inventario: []
+            };
+
+            activeCharId = id;
+            renderizarSeletorPersonagens();
+            carregarDadosNaTela(personagensData[id]);
+            renderizarInventario();
+            window.salvarDados();
+            fecharModalCriarPersonagem();
+        }
+
+        window.deletarPersonagemAtual = function() {
+            if (Object.keys(personagensData).length <= 1) return alert("A campanha precisa ter pelo menos um personagem.");
+            if (confirm(`Tem certeza que deseja excluir a ficha de ${personagensData[activeCharId].nome}?`)) {
+                delete personagensData[activeCharId];
+                activeCharId = Object.keys(personagensData)[0];
+                renderizarSeletorPersonagens();
+                carregarDadosNaTela(personagensData[activeCharId]);
+                renderizarInventario();
+                window.salvarDados();
+            }
+        }
+
+        window.abrirModalRolagemManual = function() {
+            document.getElementById('modal-rolagem').classList.remove('hidden');
+            document.getElementById('modal-rolagem').classList.add('flex');
+        }
+
+        window.fecharModalRolagemManual = function() {
+            document.getElementById('modal-rolagem').classList.remove('flex');
+            document.getElementById('modal-rolagem').classList.add('hidden');
+        }
+
+        window.executarRolagemManual = function() {
+            const qtd = parseInt(document.getElementById('manual-qtd').value) || 1;
+            const tipo = parseInt(document.getElementById('manual-tipo').value) || 6;
+            const mod = parseInt(document.getElementById('manual-mod').value) || 0;
+
+            let resultados = [];
+            let soma = 0;
+            for(let i = 0; i < qtd; i++) {
+                let val = Math.floor(Math.random() * tipo) + 1;
+                resultados.push(val);
+                soma += val;
+            }
+            let total = soma + mod;
+            let modTexto = mod !== 0 ? (mod > 0 ? ` + ${mod}` : ` - ${Math.abs(mod)}`) : '';
+            const nomeChar = document.getElementById('char-name').value || 'Agente';
+
+            adicionarAoLog(`🎲 <strong>${nomeChar}</strong> - Rolagem Manual (${qtd}d${tipo}${modTexto}): [${resultados.join(', ')}] = <strong>Total: ${total}</strong>`);
+            fecharModalRolagemManual();
+        }
+
+        function adicionarAoLog(texto) {
+            const container = document.getElementById('log-container');
+            if (container.children.length === 1 && container.children[0].classList.contains('italic')) {
+                container.innerHTML = '';
+            }
+            const div = document.createElement('div');
+            div.className = "border-b border-bordercol/50 pb-1.5 last:border-none";
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${texto}`;
+            container.prepend(div);
+        }
+
+        window.limparLog = function() {
+            document.getElementById('log-container').innerHTML = '<div class="text-zinc-500 italic">Nenhuma rolagem realizada nesta sessão.</div>';
+        }
+    </script>
+</body>
+</html>
