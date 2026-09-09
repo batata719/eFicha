@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ficha RPG - Totalmente Editável (Mesa Compartilhada)</title>
+    <title>Ficha RPG - 100% Sincronizada (Criado por Felipe Tozzini)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -28,19 +28,19 @@
         ::-webkit-scrollbar-thumb:hover { background: #3f4656; }
     </style>
 </head>
-<body class="min-h-screen p-3 md:p-6">
+<body class="min-h-screen p-3 md:p-6 flex flex-col justify-between">
 
-    <div class="max-w-7xl mx-auto space-y-6">
+    <div class="max-w-7xl mx-auto space-y-6 w-full">
 
-        <!-- Aviso de Permissões do Firestore se houver bloqueio -->
+        <!-- Firestore Permission Alert Warning -->
         <div id="firestore-warning" class="hidden bg-amber-950/80 border border-amber-600 text-amber-200 px-4 py-3 rounded-xl text-xs flex justify-between items-center shadow-lg">
             <div>
-                <strong>Aviso do Firestore:</strong> Permissões insuficientes. Certifique-se de configurar as regras do seu Firestore para permitir leitura e escrita públicas.
+                <strong>Aviso do Firestore:</strong> Permissões insuficientes. Configure as regras do seu Firestore para leitura e escrita públicas.
             </div>
             <button onclick="document.getElementById('firestore-warning').classList.add('hidden')" class="text-amber-400 hover:text-white font-bold px-2">✕</button>
         </div>
 
-        <!-- Cabeçalho com Seletor, Criação e Sincronização -->
+        <!-- Header with Selector, Character Creation and Sync Badge -->
         <header class="bg-cardbg border border-bordercol rounded-xl p-4 flex flex-col md:flex-row justify-between items-center gap-4 shadow-xl">
             <div class="flex items-center gap-3 w-full md:w-auto flex-wrap">
                 <span class="text-xs uppercase tracking-wider text-zinc-400 font-bold">Personagens:</span>
@@ -60,10 +60,10 @@
             </div>
         </header>
 
-        <!-- Grade Principal -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Main Layout Grid (Visible only when characters exist) -->
+        <main id="main-content" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-            <!-- Coluna Esquerda: Avatar, Identidade, Atributos e PV/PD -->
+            <!-- Left Column: Avatar, Identity, Core Attributes and HP/PD -->
             <div class="lg:col-span-4 space-y-6">
                 <div class="bg-cardbg border border-bordercol rounded-xl p-5 shadow-lg">
                     <div class="flex flex-col items-center text-center">
@@ -82,7 +82,7 @@
                         <div class="flex items-center justify-between w-full mt-2 gap-2">
                             <div class="flex items-center gap-1 w-1/2">
                                 <span class="text-xs text-zinc-400">Nível:</span>
-                                <input type="number" id="char-level" class="w-full text-center text-xs bg-darkbg border border-bordercol rounded py-1 text-white font-bold" value="2" oninput="salvarDados()">
+                                <input type="number" id="char-level" class="w-full text-center text-xs bg-darkbg border border-bordercol rounded py-1 text-white font-bold" value="1" oninput="salvarDados()">
                             </div>
                             <div class="w-1/2">
                                 <button onclick="deletarPersonagemAtual()" class="w-full bg-zinc-800 hover:bg-red-950 text-zinc-400 hover:text-red-400 border border-bordercol text-[10px] font-semibold py-1.5 rounded transition">Excluir Ficha</button>
@@ -90,7 +90,7 @@
                         </div>
                     </div>
 
-                    <!-- PV e PD -->
+                    <!-- PV & PD Status Bars -->
                     <div class="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-bordercol">
                         <div class="bg-darkbg p-2.5 rounded-lg border border-bordercol text-center">
                             <label class="text-[10px] uppercase font-bold text-zinc-400 block mb-1">PV (Vida)</label>
@@ -98,12 +98,12 @@
                         </div>
                         <div class="bg-darkbg p-2.5 rounded-lg border border-bordercol text-center">
                             <label class="text-[10px] uppercase font-bold text-zinc-400 block mb-1">PD (Esforço)</label>
-                            <input type="number" id="char-pd" class="w-full text-center text-lg font-bold text-blue-400 bg-transparent border-none focus:outline-none" value="16" oninput="salvarDados()">
+                            <input type="number" id="char-pd" class="w-full text-center text-lg font-bold text-blue-400 bg-transparent border-none focus:outline-none" value="10" oninput="salvarDados()">
                         </div>
                     </div>
                 </div>
 
-                <!-- Atributos -->
+                <!-- Attributes Control Box -->
                 <div class="bg-cardbg border border-bordercol rounded-xl p-5 shadow-lg">
                     <h2 class="text-sm font-bold text-red-500 uppercase tracking-wider mb-3 pb-2 border-b border-bordercol flex justify-between items-center">
                         Atributos Base
@@ -128,8 +128,8 @@
                             <div class="flex items-center gap-2">
                                 <select id="attr-mente" class="bg-zinc-900 border border-bordercol text-xs rounded px-2 py-1 text-white font-bold" onchange="salvarDados(); atualizarLabelsPericias();">
                                     <option value="4">d4 (4)</option>
-                                    <option value="6">d6 (6)</option>
-                                    <option value="8" selected>d8 (8)</option>
+                                    <option value="6" selected>d6 (6)</option>
+                                    <option value="8">d8 (8)</option>
                                     <option value="10">d10 (10)</option>
                                     <option value="12">d12 (12)</option>
                                 </select>
@@ -141,8 +141,8 @@
                             <div class="flex items-center gap-2">
                                 <select id="attr-emoco" class="bg-zinc-900 border border-bordercol text-xs rounded px-2 py-1 text-white font-bold" onchange="salvarDados(); atualizarLabelsPericias();">
                                     <option value="4">d4 (4)</option>
-                                    <option value="6">d6 (6)</option>
-                                    <option value="8" selected>d8 (8)</option>
+                                    <option value="6" selected>d6 (6)</option>
+                                    <option value="8">d8 (8)</option>
                                     <option value="10">d10 (10)</option>
                                     <option value="12">d12 (12)</option>
                                 </select>
@@ -152,7 +152,7 @@
                     </div>
                 </div>
 
-                <!-- Habilidade Especial Opcional -->
+                <!-- Special Focus / Ability Box -->
                 <div class="bg-cardbg border border-bordercol rounded-xl p-5 shadow-lg">
                     <h2 class="text-sm font-bold text-amber-500 uppercase tracking-wider mb-2 pb-1 border-b border-bordercol">Habilidade / Foco Especial (Opcional)</h2>
                     <input type="text" id="foco-titulo" class="w-full text-xs font-bold bg-darkbg border border-bordercol rounded p-1.5 mb-2 text-zinc-200" placeholder="Título da Habilidade" oninput="salvarDados()">
@@ -160,7 +160,7 @@
                 </div>
             </div>
 
-            <!-- Coluna Central: Perícias Completamente Editáveis -->
+            <!-- Center Column: Fully Editable Skills -->
             <div class="lg:col-span-5 space-y-6">
                 <div class="bg-cardbg border border-bordercol rounded-xl p-5 shadow-lg">
                     <div class="flex justify-between items-center mb-3 pb-2 border-b border-bordercol">
@@ -175,7 +175,7 @@
                 </div>
             </div>
 
-            <!-- Coluna Direita: Inventário e Log -->
+            <!-- Right Column: Inventory & Session Logs -->
             <div class="lg:col-span-3 space-y-6">
                 <div class="bg-cardbg border border-bordercol rounded-xl p-5 shadow-lg">
                     <div class="flex justify-between items-center mb-3 pb-2 border-b border-bordercol">
@@ -197,10 +197,24 @@
                 </div>
             </div>
 
+        </main>
+
+        <!-- Empty State Message when no characters exist -->
+        <div id="empty-state" class="hidden bg-cardbg border border-bordercol rounded-xl p-12 text-center shadow-xl space-y-4">
+            <h2 class="text-xl font-bold text-white">Nenhum personagem criado na campanha</h2>
+            <p class="text-xs text-zinc-400 max-w-md mx-auto">Esta campanha inicia limpa. Clique no botão abaixo para criar a primeira ficha compartilhada de agente.</p>
+            <button onclick="abrirModalCriarPersonagem()" class="bg-red-600 hover:bg-red-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs transition shadow-lg">
+                + Criar Primeira Ficha Compartilhada
+            </button>
         </div>
     </div>
 
-    <!-- Modais -->
+    <!-- Footer with Credits -->
+    <footer class="text-center py-4 text-xs text-zinc-500 border-t border-bordercol mt-8">
+        Criado por <strong class="text-zinc-300">Felipe Tozzini</strong> • Sistema de Fichas RPG 100% Sincronizado
+    </footer>
+
+    <!-- Modals -->
     <div id="modal-criar" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
         <div class="bg-cardbg border border-bordercol rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <h3 class="text-base font-bold text-white border-b border-bordercol pb-2">✨ Criar Nova Ficha Compartilhada</h3>
@@ -225,7 +239,7 @@
         </div>
     </div>
 
-    <!-- Modal de Adicionar Item ao Inventário -->
+    <!-- Modal: Add Inventory Item -->
     <div id="modal-inventario" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
         <div class="bg-cardbg border border-bordercol rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <h3 class="text-base font-bold text-white border-b border-bordercol pb-2">🎒 Adicionar Novo Item</h3>
@@ -254,6 +268,7 @@
         </div>
     </div>
 
+    <!-- Modal: Manual Dice Roll -->
     <div id="modal-rolagem" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
         <div class="bg-cardbg border border-bordercol rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <h3 class="text-base font-bold text-white border-b border-bordercol pb-2">🎲 Rolagem Manual Personalizada</h3>
@@ -282,6 +297,15 @@
                 <button onclick="executarRolagemManual()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg text-sm transition">Rolar Dados</button>
                 <button onclick="fecharModalRolagemManual()" class="px-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-2 rounded-lg text-sm transition">Cancelar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal: Image Viewer (Visualização de Imagem em tela cheia) -->
+    <div id="modal-imagem" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50" onclick="fecharModalImagem()">
+        <div class="relative max-w-3xl max-h-[90vh] flex flex-col items-center" onclick="event.stopPropagation()">
+            <button onclick="fecharModalImagem()" class="absolute -top-10 right-0 text-white hover:text-red-400 font-bold text-lg bg-zinc-900/80 px-3 py-1 rounded-lg border border-bordercol">✕ Fechar</button>
+            <img id="imagem-visualizador" src="" class="max-w-full max-h-[80vh] rounded-xl object-contain border-2 border-bordercol shadow-2xl">
+            <span id="imagem-legenda" class="text-xs text-zinc-300 mt-3 font-medium bg-zinc-900 px-3 py-1.5 rounded-lg border border-bordercol"></span>
         </div>
     </div>
 
@@ -327,34 +351,13 @@
             { nome: 'VIGOR', attr: 'fisico', dadoBase: 6 }
         ];
 
-        let personagensData = {
-            'alan': {
-                nome: 'ALAN', archetype: 'EXECUTOR', profissao: 'CIENTISTA', nivel: 2, pv: 10, pd: 16,
-                fisico: 6, mente: 8, emoco: 8, focoTitulo: 'FOCO MENTAL', focoDesc: 'Quando faz um teste mental, você pode gastar 2 PD para receber +d4 no teste.',
-                avatar: 'https://placehold.co/150x150/141721/e53e3e?text=Alan',
-                pericias: JSON.parse(JSON.stringify(periciasPadrao)),
-                inventario: [{ nome: 'Lanterna Tática', tipo: 'Equipamento', qtd: 1, peso: 1, imagem: '' }]
-            },
-            'edgar': {
-                nome: 'EDGAR', archetype: 'EXECUTOR', profissao: 'OPERÁRIO', nivel: 2, pv: 18, pd: 10,
-                fisico: 10, mente: 6, emoco: 6, focoTitulo: 'ESFORÇO E SUOR', focoDesc: 'Você possui uma perícia física aumentada para d6.',
-                avatar: 'https://placehold.co/150x150/141721/e53e3e?text=Edgar',
-                pericias: JSON.parse(JSON.stringify(periciasPadrao)),
-                inventario: [{ nome: 'Chave de Fenda Pesada', tipo: 'Ferramenta', qtd: 1, peso: 2, imagem: '' }]
-            }
-        };
-
-        let activeCharId = 'alan';
+        let personagensData = {};
+        let activeCharId = null;
         let isRemoteUpdate = false;
 
         window.addEventListener('DOMContentLoaded', async () => {
-            renderizarSeletorPersonagens();
-            renderizarPericias();
-            renderizarInventario();
-            carregarDadosNaTela(personagensData[activeCharId]);
-
             try {
-                const docRef = doc(db, 'campanhas', 'sala_principal_fichas', 'dados_gerais', 'fichas_v4');
+                const docRef = doc(db, 'campanhas', 'sala_principal_fichas', 'dados_gerais', 'fichas_tozzini_v1');
                 
                 onSnapshot(docRef, (docSnap) => {
                     if (docSnap.exists()) {
@@ -362,18 +365,28 @@
                         if (dadosRemotos && Object.keys(dadosRemotos).length > 0) {
                             isRemoteUpdate = true;
                             personagensData = dadosRemotos;
-                            if (!personagensData[activeCharId]) {
-                                activeCharId = Object.keys(personagensData)[0];
+                            const chaves = Object.keys(personagensData);
+                            if (chaves.length > 0) {
+                                if (!activeCharId || !personagensData[activeCharId]) {
+                                    activeCharId = chaves[0];
+                                }
+                                mostrarInterfaceFicha(true);
+                                renderizarSeletorPersonagens();
+                                carregarDadosNaTela(personagensData[activeCharId]);
+                            } else {
+                                mostrarInterfaceFicha(false);
                             }
-                            renderizarSeletorPersonagens();
-                            carregarDadosNaTela(personagensData[activeCharId]);
-                            renderizarInventario();
                             isRemoteUpdate = false;
+                        } else {
+                            personagensData = {};
+                            mostrarInterfaceFicha(false);
                         }
                     } else {
-                        setDoc(docRef, personagensData).catch(err => {
+                        // Se o documento não existe na nuvem, inicia vazio
+                        setDoc(docRef, {}).catch(err => {
                             if (err.code === 'permission-denied') mostrarAvisoPermissao();
                         });
+                        mostrarInterfaceFicha(false);
                     }
                     document.getElementById('sync-status').innerText = "Sincronizado (Firebase)";
                 }, (err) => {
@@ -395,10 +408,27 @@
             document.getElementById('sync-dot').className = "w-2 h-2 rounded-full bg-red-500 animate-none";
         }
 
+        function mostrarInterfaceFicha(temPersonagens) {
+            const mainContent = document.getElementById('main-content');
+            const emptyState = document.getElementById('empty-state');
+            if (temPersonagens) {
+                mainContent.classList.remove('hidden');
+                mainContent.classList.add('grid');
+                emptyState.classList.add('hidden');
+            } else {
+                mainContent.classList.remove('grid');
+                mainContent.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+            }
+        }
+
         function renderizarSeletorPersonagens() {
             const container = document.getElementById('character-selector');
             container.innerHTML = '';
-            Object.keys(personagensData).forEach(id => {
+            const chaves = Object.keys(personagensData);
+            if (chaves.length === 0) return;
+
+            chaves.forEach(id => {
                 const char = personagensData[id];
                 const btn = document.createElement('button');
                 const ativo = id === activeCharId;
@@ -413,7 +443,6 @@
             activeCharId = id;
             renderizarSeletorPersonagens();
             carregarDadosNaTela(personagensData[id]);
-            renderizarInventario();
         }
 
         function carregarDadosNaTela(char) {
@@ -439,9 +468,8 @@
         }
 
         window.salvarDados = async function() {
-            if (isRemoteUpdate) return;
+            if (isRemoteUpdate || !activeCharId || !personagensData[activeCharId]) return;
             const char = personagensData[activeCharId];
-            if (!char) return;
             
             char.nome = document.getElementById('char-name').value;
             char.archetype = document.getElementById('char-archetype').value;
@@ -456,7 +484,7 @@
             char.focoDesc = document.getElementById('foco-descricao').value;
 
             try {
-                const docRef = doc(db, 'campanhas', 'sala_principal_fichas', 'dados_gerais', 'fichas_v4');
+                const docRef = doc(db, 'campanhas', 'sala_principal_fichas', 'dados_gerais', 'fichas_tozzini_v1');
                 await setDoc(docRef, personagensData, { merge: true });
             } catch(e) {
                 if (e.code === 'permission-denied') mostrarAvisoPermissao();
@@ -521,6 +549,7 @@
         }
 
         window.adicionarNovaPericia = function() {
+            if (!activeCharId) return;
             const nome = prompt("Nome da nova perícia:") || "NOVA PERÍCIA";
             personagensData[activeCharId].pericias.push({ nome: nome.toUpperCase(), attr: 'mente', dadoBase: 4 });
             renderizarPericias();
@@ -561,8 +590,9 @@
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    document.getElementById('char-avatar').src = e.target.result;
-                    personagensData[activeCharId].avatar = e.target.result;
+                    const base64Img = e.target.result;
+                    document.getElementById('char-avatar').src = base64Img;
+                    personagensData[activeCharId].avatar = base64Img;
                     window.salvarDados();
                 };
                 reader.readAsDataURL(file);
@@ -585,7 +615,7 @@
                 div.className = "bg-darkbg border border-bordercol rounded-lg p-2.5 flex justify-between items-center text-xs gap-3";
                 
                 let imgHtml = item.imagem 
-                    ? `<img src="${item.imagem}" class="w-10 h-10 rounded object-cover border border-bordercol cursor-pointer shrink-0" title="Alterar imagem" onclick="this.nextElementSibling.click()">`
+                    ? `<img src="${item.imagem}" class="w-10 h-10 rounded object-cover border border-bordercol cursor-pointer shrink-0 hover:border-emerald-500 transition" title="Clique para ampliar" onclick="abrirModalImagem('${item.imagem}', '${item.nome}')">`
                     : `<div class="w-10 h-10 rounded bg-zinc-800 border border-bordercol flex items-center justify-center text-[9px] text-zinc-400 cursor-pointer shrink-0 hover:border-red-500" title="Adicionar foto" onclick="this.nextElementSibling.click()">+ Foto</div>`;
 
                 div.innerHTML = `
@@ -597,13 +627,17 @@
                             <span class="text-[10px] text-zinc-400">${item.tipo} • Qtd: ${item.qtd} • Peso: ${item.peso}</span>
                         </div>
                     </div>
-                    <button onclick="removerItemInventario(${index})" class="text-zinc-500 hover:text-red-500 p-1" title="Excluir item">✕</button>
+                    <div class="flex items-center gap-1">
+                        ${item.imagem ? `<button onclick="document.getElementById('file-input-${index}').click()" class="text-zinc-400 hover:text-white p-1 text-[10px]" title="Trocar foto">🔄</button><input type="file" id="file-input-${index}" accept="image/*" class="hidden" onchange="adicionarImagemItem(${index}, event)">` : ''}
+                        <button onclick="removerItemInventario(${index})" class="text-zinc-500 hover:text-red-500 p-1" title="Excluir item">✕</button>
+                    </div>
                 `;
                 container.appendChild(div);
             });
         }
 
         window.abrirModalInventario = function() {
+            if (!activeCharId) return alert("Selecione ou crie uma ficha primeiro.");
             document.getElementById('item-nome').value = '';
             document.getElementById('item-tipo').value = 'Item';
             document.getElementById('item-qtd').value = '1';
@@ -648,7 +682,8 @@
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    personagensData[activeCharId].inventario[index].imagem = e.target.result;
+                    const base64Img = e.target.result;
+                    personagensData[activeCharId].inventario[index].imagem = base64Img;
                     renderizarInventario();
                     window.salvarDados();
                 };
@@ -656,7 +691,22 @@
             }
         }
 
+        window.abrirModalImagem = function(src, legenda) {
+            document.getElementById('imagem-visualizador').src = src;
+            document.getElementById('imagem-legenda').innerText = legenda;
+            document.getElementById('modal-imagem').classList.remove('hidden');
+            document.getElementById('modal-imagem').classList.add('flex');
+        }
+
+        window.fecharModalImagem = function() {
+            document.getElementById('modal-imagem').classList.remove('flex');
+            document.getElementById('modal-imagem').classList.add('hidden');
+        }
+
         window.abrirModalCriarPersonagem = function() {
+            document.getElementById('novo-nome').value = '';
+            document.getElementById('novo-archetype').value = '';
+            document.getElementById('novo-prof').value = '';
             document.getElementById('modal-criar').classList.remove('hidden');
             document.getElementById('modal-criar').classList.add('flex');
         }
@@ -666,7 +716,7 @@
             document.getElementById('modal-criar').classList.add('hidden');
         }
 
-        window.executarCriacaoPersonagem = function() {
+        window.executarCriacaoPersonagem = async function() {
             const nome = document.getElementById('novo-nome').value.trim();
             if (!nome) return alert("Digite o nome do personagem.");
             const archetype = document.getElementById('novo-archetype').value.trim() || 'AGENTE';
@@ -691,22 +741,28 @@
             };
 
             activeCharId = id;
+            mostrarInterfaceFicha(true);
             renderizarSeletorPersonagens();
             carregarDadosNaTela(personagensData[id]);
-            renderizarInventario();
-            window.salvarDados();
+            await window.salvarDados();
             fecharModalCriarPersonagem();
         }
 
-        window.deletarPersonagemAtual = function() {
-            if (Object.keys(personagensData).length <= 1) return alert("A campanha precisa ter pelo menos um personagem.");
+        window.deletarPersonagemAtual = async function() {
+            if (!activeCharId) return;
             if (confirm(`Tem certeza que deseja excluir a ficha de ${personagensData[activeCharId].nome}?`)) {
                 delete personagensData[activeCharId];
-                activeCharId = Object.keys(personagensData)[0];
-                renderizarSeletorPersonagens();
-                carregarDadosNaTela(personagensData[activeCharId]);
-                renderizarInventario();
-                window.salvarDados();
+                const chaves = Object.keys(personagensData);
+                if (chaves.length > 0) {
+                    activeCharId = chaves[0];
+                    renderizarSeletorPersonagens();
+                    carregarDadosNaTela(personagensData[activeCharId]);
+                } else {
+                    activeCharId = null;
+                    mostrarInterfaceFicha(false);
+                }
+                const docRef = doc(db, 'campanhas', 'sala_principal_fichas', 'dados_gerais', 'fichas_tozzini_v1');
+                await setDoc(docRef, personagensData, { merge: false });
             }
         }
 
@@ -734,7 +790,7 @@
             }
             let total = soma + mod;
             let modTexto = mod !== 0 ? (mod > 0 ? ` + ${mod}` : ` - ${Math.abs(mod)}`) : '';
-            const nomeChar = document.getElementById('char-name').value || 'Agente';
+            const nomeChar = document.getElementById('char-name')?.value || 'Mesa';
 
             adicionarAoLog(`🎲 <strong>${nomeChar}</strong> - Rolagem Manual (${qtd}d${tipo}${modTexto}): [${resultados.join(', ')}] = <strong>Total: ${total}</strong>`);
             fecharModalRolagemManual();
